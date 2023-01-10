@@ -2,6 +2,7 @@ package com.vega.protocol.strategy;
 
 import com.vega.protocol.client.api.VegaApiClient;
 import com.vega.protocol.model.*;
+import com.vega.protocol.store.BinanceStore;
 import com.vega.protocol.store.VegaStore;
 import com.vega.protocol.submission.OrderCancellation;
 import com.vega.protocol.submission.OrderSubmission;
@@ -24,28 +25,31 @@ public class SimpleMarketMaker implements TradingStrategy {
     @Override
     public void execute() {
         log.info("Executing trading strategy...");
-        VegaStore store = VegaStore.getInstance();
+        VegaStore vegaStore = VegaStore.getInstance();
+        BinanceStore binanceStore = BinanceStore.getInstance();
         String marketId = config.getMarketId();
         VegaApiClient apiClient = new VegaApiClient();
-        store.getMarketById(marketId).ifPresent(market -> {
+        vegaStore.getMarketById(marketId).ifPresent(market -> {
             log.info("Updating quotes for {}", market.getTradableInstrument().getInstrument().getName());
-            double bestBidPrice = market.getBestBidPrice();
-            double bestOfferPrice = market.getBestOfferPrice();
-            Optional<Position> positionOptional = store.getPositionByMarketId(market.getId());
-            Position position = positionOptional.orElse(new Position().setOpenVolume("0").setAverageEntryPrice("0"));
-            double openVolume = position.getOpenVolume();
-            double averageEntryPrice = position.getAverageEntryPrice();
-            double balance = getTotalBalance(market.getSettlementAsset().getId());
-            double bidVolume = (balance * 0.5) - (openVolume * averageEntryPrice);
-            double offerVolume = (balance * 0.5) + (openVolume * averageEntryPrice);
-            bidVolume = Math.max(bidVolume, 0);
-            offerVolume = Math.max(offerVolume, 0);
-            double notionalExposure = Math.abs(openVolume * averageEntryPrice);
-            log.info("Open volume = {}; Entry price = {}; Notional exposure = {}",
-                    openVolume, averageEntryPrice, notionalExposure);
-            log.info("Bid volume = {}; Offer volume = {}", bidVolume, offerVolume);
+            ReferencePrice referencePrice = binanceStore.getReferencePriceByMarket(config.getBinanceMarket())
+                    .orElse(new ReferencePrice().setAskPrice(0).setBidPrice(0));
+            double bestOfferPrice = referencePrice.getAskPrice();
+            double bestBidPrice = referencePrice.getBidPrice();
             if(bestBidPrice > 0 && bestOfferPrice > 0) {
-                List<Order> orders = store.getOrders();
+                Optional<Position> positionOptional = vegaStore.getPositionByMarketId(market.getId());
+                Position position = positionOptional.orElse(new Position().setOpenVolume("0").setAverageEntryPrice("0"));
+                double openVolume = position.getOpenVolume();
+                double averageEntryPrice = position.getAverageEntryPrice();
+                double balance = getTotalBalance(market.getSettlementAsset().getId());
+                double bidVolume = (balance * 0.5) - (openVolume * averageEntryPrice);
+                double offerVolume = (balance * 0.5) + (openVolume * averageEntryPrice);
+                bidVolume = Math.max(bidVolume, 0);
+                offerVolume = Math.max(offerVolume, 0);
+                double notionalExposure = Math.abs(openVolume * averageEntryPrice);
+                log.info("Open volume = {}; Entry price = {}; Notional exposure = {}",
+                        openVolume, averageEntryPrice, notionalExposure);
+                log.info("Bid volume = {}; Offer volume = {}", bidVolume, offerVolume);
+                List<Order> orders = vegaStore.getOrders();
                 List<OrderCancellation> cancellations = orders.stream().map(o ->
                         new OrderCancellation().setOrderId(o.getId()).setMarketId(o.getMarketId())).toList();
                 List<OrderSubmission> submissions = new ArrayList<>();

@@ -4,6 +4,7 @@ import com.vega.protocol.model.ReferencePrice;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BinanceStore {
@@ -27,6 +28,21 @@ public class BinanceStore {
      */
     public void save(final ReferencePrice referencePrice) {
         referencePrices.put(referencePrice.getSymbol(), referencePrice);
+    }
+
+    /**
+     * Get reference price by market
+     *
+     * @param symbol the market symbol
+     *
+     * @return {@link Optional < ReferencePrice >}
+     */
+    public Optional<ReferencePrice> getReferencePriceByMarket(final String symbol) {
+        ReferencePrice referencePrice = referencePrices.get(symbol);
+        if(referencePrice == null) {
+            return Optional.empty();
+        }
+        return Optional.of(referencePrice);
     }
 
     /**
