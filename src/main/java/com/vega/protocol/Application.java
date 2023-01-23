@@ -1,14 +1,14 @@
 package com.vega.protocol;
 
 import com.vega.protocol.client.api.VegaApiClient;
+import com.vega.protocol.client.ws.BinanceWebSocketClient;
+import com.vega.protocol.client.ws.VegaWebSocketClient;
 import com.vega.protocol.model.AppState;
 import com.vega.protocol.model.Config;
 import com.vega.protocol.store.BinanceStore;
 import com.vega.protocol.store.VegaStore;
 import com.vega.protocol.strategy.SimpleMarketMaker;
 import com.vega.protocol.strategy.TradingStrategy;
-import com.vega.protocol.client.ws.BinanceWebSocketClient;
-import com.vega.protocol.client.ws.VegaWebSocketClient;
 import io.javalin.Javalin;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,7 +31,8 @@ public class Application {
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
 
     public static void main(String[] args) {
-        TradingStrategy tradingStrategy = new SimpleMarketMaker();
+        VegaApiClient vegaApiClient = new VegaApiClient();
+        TradingStrategy tradingStrategy = new SimpleMarketMaker(vegaApiClient);
         taskExecutor.submit(Application::initializeWebSocketConnection);
         scheduler.scheduleAtFixedRate(Application::loadInitialData, 0, 30, TimeUnit.SECONDS);
         scheduler.scheduleAtFixedRate(Application::keepWebSocketsAlive, 3, 1, TimeUnit.SECONDS);

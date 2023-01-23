@@ -175,6 +175,10 @@ public class VegaApiClient {
                     .build()
                     .send(request, HttpResponse.BodyHandlers.ofString());
             HttpResponse<String> response = executeHttpRequest(request);
+            if(response.statusCode() != 200) {
+                log.error(response.body());
+                return;
+            }
             JSONObject json = new JSONObject(response.body());
             if(json.has("result")) {
                 JSONObject txResult = json.getJSONObject("result").getJSONObject("tx_result");

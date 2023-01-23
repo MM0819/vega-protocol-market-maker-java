@@ -6,6 +6,7 @@ import com.vega.protocol.store.BinanceStore;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.net.URI;
@@ -26,9 +27,10 @@ public class BinanceWebSocketClient extends WebSocketClient {
     @Override
     public void onOpen(ServerHandshake handshake) {
         try {
+            String symbol = config.getBinanceMarket().toLowerCase();
             JSONObject sub = new JSONObject()
-                    .put("method", "ticker.24hr")
-                    .put("params", new JSONObject().put("symbol", config.getBinanceMarket()))
+                    .put("method", "SUBSCRIBE")
+                    .put("params", new JSONArray().put(String.format("%s@ticker", symbol)))
                     .put("id", 1);
             this.send(sub.toString());
         } catch (Exception e) {
@@ -43,12 +45,13 @@ public class BinanceWebSocketClient extends WebSocketClient {
     public void onMessage(String message) {
         try {
             JSONObject jsonObject = new JSONObject(message);
-            if(jsonObject.has("id") && jsonObject.getInt("id") == 1) {
-                JSONObject data = jsonObject.getJSONObject("result");
-                double askPrice = data.getDouble("askPrice");
-                double bidPrice = data.getDouble("bidPrice");
+            if(jsonObject.optString("e") != null &&
+                    jsonObject.optString("e").equals("24hrTicker")) {
+                String symbol = jsonObject.getString("s");
+                double askPrice = jsonObject.getDouble("a");
+                double bidPrice = jsonObject.getDouble("b");
                 ReferencePrice referencePrice = new ReferencePrice()
-                        .setSymbol(config.getBinanceMarket())
+                        .setSymbol(symbol)
                         .setAskPrice(askPrice)
                         .setBidPrice(bidPrice);
                 store.save(referencePrice);

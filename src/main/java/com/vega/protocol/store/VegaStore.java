@@ -178,17 +178,6 @@ public class VegaStore {
     }
 
     /**
-     * Get account by ID
-     *
-     * @param id the account ID
-     *
-     * @return {@link Optional<Account>}
-     */
-    public Optional<Account> getAccountById(final String id) {
-        return accounts.values().stream().filter(a -> a.getId().equals(id)).findFirst();
-    }
-
-    /**
      * Clear all data from internal state
      */
     public void truncate() {

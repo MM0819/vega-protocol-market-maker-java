@@ -19,6 +19,12 @@ public class SimpleMarketMaker implements TradingStrategy {
 
     private final Config config = Config.getInstance();
 
+    private final VegaApiClient vegaApiClient;
+
+    public SimpleMarketMaker(VegaApiClient vegaApiClient) {
+        this.vegaApiClient = vegaApiClient;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -28,7 +34,6 @@ public class SimpleMarketMaker implements TradingStrategy {
         VegaStore vegaStore = VegaStore.getInstance();
         BinanceStore binanceStore = BinanceStore.getInstance();
         String marketId = config.getMarketId();
-        VegaApiClient apiClient = new VegaApiClient();
         vegaStore.getMarketById(marketId).ifPresent(market -> {
             log.info("Updating quotes for {}", market.getTradableInstrument().getInstrument().getName());
             ReferencePrice referencePrice = binanceStore.getReferencePriceByMarket(config.getBinanceMarket())
@@ -57,7 +62,7 @@ public class SimpleMarketMaker implements TradingStrategy {
                 addOrderSubmissions(submissions, bestOfferPrice, "SELL", market, offerVolume);
                 log.info("Cancellations = {}; Amendments = {}; Submissions = {}",
                         cancellations.size(), 0, submissions.size());
-                Optional<String> txHash = apiClient.sendBatchMarketInstruction(
+                Optional<String> txHash = vegaApiClient.sendBatchMarketInstruction(
                         submissions, cancellations, Collections.emptyList());
                 txHash.ifPresent(s -> log.info("Updated quotes {}", s));
             }
